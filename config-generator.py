@@ -1,7 +1,4 @@
-import sys
-import json
-import datetime
-
+import sys, json, datetime
 
 class UploadConfig:
     def __init__(self, output_file):
@@ -32,9 +29,9 @@ class UploadConfig:
         res["number"] = self.number
         if self.gatekeeper:
             res["gatekeeper"] = {
-                "gatekeeperNetwork": self.gatekeeperNetwork,
-                "expireOnUse": self.gatekeeperExpireOnUse
-            }
+                    "gatekeeperNetwork": self.gatekeeperNetwork,
+                    "expireOnUse": self.gatekeeperExpireOnUse
+                }
         else:
             res["gatekeeper"] = None
         res["solTreasuryAccount"] = self.solTreasuryAccount
@@ -50,11 +47,11 @@ class UploadConfig:
         res["awsS3Bucket"] = self.awsS3Bucket
         res["noRetainAuthority"] = self.noRetainAuthority
         res["noMutable"] = self.noMutable
-
+        
         return json.dumps(res)
 
     def generate_file_config(self):
-        with open(self.output_file, 'w') as f:
+        with open(self.output_file,'w') as f:
             f.write(self.generate_json())
 
 
@@ -124,19 +121,18 @@ class SecureInput:
 
     def date_input(self, prompt):
         got_input = False
-
+        
         while not got_input:
             try:
                 res = input(prompt)
                 datetime.datetime.strptime(res, '%d %b %Y %H:%M:%S %Z')
                 got_input = True
             except ValueError:
-                print(
-                    "Incorrect data format, should be: DD MMM YYYY HH:MM:SS [UTC, GMT]")
+                print("Incorrect data format, should be: DD MMM YYYY HH:MM:SS [UTC, GMT]")
                 print("Eg: 23 Dec 2021 21:00:00 GMT")
 
-        return res
 
+        return res
 
 ### Main Part of the Program
 if __name__ == "__main__":
@@ -144,49 +140,53 @@ if __name__ == "__main__":
     if (len(sys.argv[1:]) != 0):
         print("help")
         sys.exit(2)
-
+    
     uploadConfig = UploadConfig("config.json")
     secureInput = SecureInput()
 
-    uploadConfig.number = secureInput.int_number_input(
-        "How many items do you have in your collection? ")
-    uploadConfig.price = secureInput.float_number_input(
-        "At what price do you want to sell an item (in SOL)? ")
-
-    uploadConfig.gatekeeper = secureInput.boolean_input(
-        "Do you want Captcha Settings? ", True)
+    uploadConfig.price = secureInput.float_number_input("At what price do you want to sell an item (in SOL)? ")
+    uploadConfig.number = secureInput.int_number_input("How many items do you have in your collection? ")
+    
+    uploadConfig.gatekeeper = secureInput.boolean_input("Do you want Captcha Settings? ", True)
     if (uploadConfig.gatekeeper):
-        uploadConfig.gatekeeperNetwork = secureInput.string_input(
-            "Gatekeeper Network address :", "ignREusXmGrscGNUesoU9mxfds9AiYTezUKex2PsZV6")
-        uploadConfig.gatekeeperExpireOnUse = secureInput.boolean_input(
-            "Do you want the Captcha to expire on use? ", True)
-
-    uploadConfig.storage = secureInput.input_among_choices(
-        "What type of storage do you want to use? ", ["arweave", "aws", "ipfs"])
-    if uploadConfig.storage == "aws":
-        uploadConfig.storage = secureInput.string_input(
-            "Enter your AWS Bucket: ")
-    elif uploadConfig.storage == "ipfs":
-        uploadConfig.ipfsInfuraProjectId = secureInput.string_input(
-            "Enter your IPFS Project ID: ")
-        uploadConfig.ipfsInfuraSecret = secureInput.string_input(
-            "Enter your IPFS Infura Secret: ")
-
-    uploadConfig.noRetainAuthority = not secureInput.boolean_input(
-        "Do you want any Retain Authority? ")
-    uploadConfig.noMutable = not secureInput.boolean_input(
-        "Do you want your NFTs mutable? ", True)
-
+        uploadConfig.gatekeeperNetwork = secureInput.string_input("Gatekeeper Network address :", "ignREusXmGrscGNUesoU9mxfds9AiYTezUKex2PsZV6")
+        uploadConfig.gatekeeperExpireOnUse = secureInput.boolean_input("Do you want the Captcha to expire on use? ", True)
+    
     if (secureInput.boolean_input("Do you want to set a SOL Treasury Account? ")):
-        uploadConfig.solTreasuryAccount = secureInput.string_input(
-            "Enter your SOL Treasury Account: ")
+        uploadConfig.solTreasuryAccount = secureInput.string_input("Enter your SOL Treasury Account: ")
     elif (secureInput.boolean_input("Do you want to set a SPL Token? ")):
-        uploadConfig.splToken = secureInput.string_input(
-            "Enter your SPL Token: ")
-        uploadConfig.splTokenAccount = secureInput.string_input(
-            "Enter your SPL Token Account: ")
-
+        uploadConfig.splToken = secureInput.string_input("Enter your SPL Token: ")
+        uploadConfig.splTokenAccount = secureInput.string_input("Enter your SPL Token Account: ")
+        
     uploadConfig.goLiveDate = secureInput.date_input("Enter the mint date: ")
 
+    uploadConfig.endSettings = secureInput.boolean_input("Do you want to set an end settings? ")
+    if (uploadConfig.endSettings):
+        uploadConfig.endSettings_type = secureInput.input_among_choices("Do you want your mint to end after: ", ["date", "amount"])
+        if (uploadConfig.endSettings_type == "date"):
+            uploadConfig.endSettings_value = secureInput.date_input("On what date do you want your mint to end: ")
+        else:
+            uploadConfig.endSettings_value = secureInput.int_number_input("After how many mint do you want your mint to end: ")
+
+    should_consider_hiddenSettings = False if uploadConfig.number < 20000 else True
+    uploadConfig.hiddenSettings = secureInput.boolean_input("Do you want to set hidden settings: ", should_consider_hiddenSettings)
+    if (uploadConfig.hiddenSettings):
+        uploadConfig.hiddenSettings_name = secureInput.string_input("Enter the name: ")
+        uploadConfig.hiddenSettings_uri = secureInput.string_input("Enter the uri: ")
+        uploadConfig.hiddenSettings_hash = secureInput.string_input("Enter the hash: ")
+
+
+    uploadConfig.storage = secureInput.input_among_choices("What type of storage do you want to use? ", ["arweave", "aws", "ipfs"])
+    if uploadConfig.storage == "aws":
+        uploadConfig.storage = secureInput.string_input("Enter your AWS Bucket: ")
+    elif uploadConfig.storage == "ipfs":
+        uploadConfig.ipfsInfuraProjectId = secureInput.string_input("Enter your IPFS Project ID: ")
+        uploadConfig.ipfsInfuraSecret = secureInput.string_input("Enter your IPFS Infura Secret: ")
+
+    uploadConfig.noRetainAuthority = not secureInput.boolean_input("Do you want any Retain Authority? ")
+    uploadConfig.noMutable = not secureInput.boolean_input("Do you want your NFTs mutable? ", True)
+
+    
     # Generate the config file
     uploadConfig.generate_file_config()
+    
